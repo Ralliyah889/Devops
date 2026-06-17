@@ -91,12 +91,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repository (required for SCP)
+        uses: actions/checkout@v4
+
+      - name: Copy docker-compose.yml to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          source: "docker-compose.yml"
+          target: "~/omni-app"
+
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
+          username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
           script: |
             # Exit immediately on error
             set -e
@@ -104,33 +118,7 @@ jobs:
             # Login to GitHub Container Registry
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            # Create deployment directory
-            mkdir -p ~/omni-app
             cd ~/omni-app
-
-            # Write docker-compose.yml file dynamically with the specific image tags (SHA)
-            cat << 'EOF' > docker-compose.yml
-            version: '3.8'
-
-            services:
-              frontend:
-                image: ghcr.io/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
-                container_name: omni-frontend
-                ports:
-                  - "80:80"
-                restart: always
-                depends_on:
-                  - backend
-
-              backend:
-                image: ghcr.io/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
-                container_name: omni-backend
-                ports:
-                  - "8000:8000"
-                environment:
-                  - DATABASE_URL=sqlite:///./app/test.db
-                restart: always
-            EOF
 
             # Pull the new images (support both docker compose and docker-compose)
             if command -v docker-compose &> /dev/null; then
