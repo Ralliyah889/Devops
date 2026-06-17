@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # ==================== ELASTICSEARCH ====================
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false # Disable security defaults for local setup simplicity
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    networks:
+      - omni_logging
+
+  # ==================== LOGSTASH ====================
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.12.0
+    container_name: logstash
+    volumes:
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+    ports:
+      - "5044:5044"
+    environment:
+      - LS_JAVA_OPTS=-Xms256m -Xmx256m
+    depends_on:
+      - elasticsearch
+    networks:
+      - omni_logging
+
+  # ==================== KIBANA ====================
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.12.0
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    networks:
+      - omni_logging
+
+  # ==================== FILEBEAT ====================
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.12.0
+    container_name: filebeat
+    user: root # Run as root to read logs from mounted directories
+    volumes:
+      # Mount configuration
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      # Mount FastAPI logs directory from host (relative to compose file location)
+      - ../backend/app/logs:/app/logs:ro
+    depends_on:
+      - logstash
+    networks:
+      - omni_logging
+
+volumes:
+  es_data:
+    driver: local
+
+networks:
+  omni_logging:
+    driver: bridge

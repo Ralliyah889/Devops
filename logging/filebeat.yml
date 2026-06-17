@@ -1,0 +1,18 @@
+filebeat.inputs:
+- type: log
+  enabled: true
+  paths:
+    - /app/logs/api.log
+  # Parse structured JSON logs directly
+  json.keys_under_root: true
+  json.overwrite_keys: true
+  json.add_error_key: true
+
+# Send outputs directly to Logstash
+output.logstash:
+  hosts: ["logstash:5044"]
+
+# Logging configurations for Filebeat itself
+logging.level: info
+logging.to_files: false
+logging.to_syslog: false

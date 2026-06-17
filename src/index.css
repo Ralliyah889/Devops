@@ -1,0 +1,193 @@
+:root {
+  --cyber-bg: #070a13;
+  --cyber-bg-card: rgba(15, 22, 38, 0.6);
+  --cyber-bg-card-hover: rgba(22, 34, 63, 0.85);
+  --cyber-border: #1f293d;
+  --text-main: #f1f5f9;
+  --bg-gradient-start: #070a13;
+  --bg-gradient-end: #0c101f;
+  --bg-radial-color: rgba(15, 23, 42, 0.9);
+}
+
+:root.light {
+  --cyber-bg: #f8fafc;
+  --cyber-bg-card: rgba(255, 255, 255, 0.6);
+  --cyber-bg-card-hover: rgba(241, 245, 249, 0.85);
+  --cyber-border: #cbd5e1;
+  --text-main: #0f172a;
+  --bg-gradient-start: #f8fafc;
+  --bg-gradient-end: #e2e8f0;
+  --bg-radial-color: rgba(203, 213, 225, 0.4);
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-cyber-bg antialiased font-sans overflow-x-hidden;
+    color: var(--text-main);
+    background-image: 
+      radial-gradient(at 0% 0%, var(--bg-radial-color) 0, transparent 50%),
+      radial-gradient(at 50% 0%, rgba(30, 41, 59, 0.1) 0, transparent 50%),
+      radial-gradient(at 100% 0%, var(--bg-radial-color) 0, transparent 50%),
+      linear-gradient(to bottom, var(--bg-gradient-start), var(--bg-gradient-end));
+  }
+
+  /* Cyber Monospace Font styling */
+  .font-digital {
+    font-family: 'Share Tech Mono', 'JetBrains Mono', monospace;
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 22, 38, 0.5);
+}
+::-webkit-scrollbar-thumb {
+  background: #1f293d;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2b3954;
+}
+
+/* Glassmorphism Panel styles */
+.cyber-panel {
+  @apply bg-cyber-bg-card backdrop-blur-md border border-cyber-border rounded-lg shadow-lg relative overflow-hidden;
+  color: var(--text-main);
+}
+.cyber-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 242, 254, 0.15), transparent);
+}
+
+.cyber-panel-cyan {
+  @apply border-cyber-cyan/25 shadow-neon-cyan;
+}
+.cyber-panel-purple {
+  @apply border-cyber-purple/25 shadow-neon-purple;
+}
+.cyber-panel-green {
+  @apply border-cyber-green/25 shadow-neon-green;
+}
+.cyber-panel-red {
+  @apply border-cyber-red/25 shadow-neon-red;
+}
+
+/* Scanline animation */
+.cyber-grid-overlay {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(31, 41, 55, 0.1) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(31, 41, 55, 0.1) 1px, transparent 1px);
+}
+
+/* Glowing text effects */
+.text-glow-cyan {
+  text-shadow: 0 0 10px rgba(0, 242, 254, 0.6), 0 0 20px rgba(0, 242, 254, 0.2);
+}
+.text-glow-purple {
+  text-shadow: 0 0 10px rgba(155, 93, 229, 0.6), 0 0 20px rgba(155, 93, 229, 0.2);
+}
+.text-glow-green {
+  text-shadow: 0 0 10px rgba(0, 245, 212, 0.6), 0 0 20px rgba(0, 245, 212, 0.2);
+}
+.text-glow-red {
+  text-shadow: 0 0 10px rgba(255, 0, 127, 0.6), 0 0 20px rgba(255, 0, 127, 0.2);
+}
+
+/* Corner bracket UI element */
+.cyber-corners::before, .cyber-corners::after {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-color: currentColor;
+  border-style: solid;
+  pointer-events: none;
+}
+.cyber-corners::before {
+  top: 4px;
+  left: 4px;
+  border-width: 1px 0 0 1px;
+}
+.cyber-corners::after {
+  bottom: 4px;
+  right: 4px;
+  border-width: 0 1px 1px 0;
+}
+
+/* Light Mode Overrides for Hardcoded Dark Styles */
+.light, :root.light {
+  --cyber-bg: #f1f5f9;
+  --cyber-bg-card: #ffffff;
+  --cyber-bg-card-hover: #e2e8f0;
+  --cyber-border: #cbd5e1;
+  --text-main: #0f172a;
+}
+
+.light body {
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(203, 213, 225, 0.4) 0, transparent 50%),
+    radial-gradient(at 50% 0%, rgba(30, 41, 59, 0.05) 0, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(203, 213, 225, 0.4) 0, transparent 50%),
+    linear-gradient(to bottom, #f8fafc, #e2e8f0) !important;
+  color: #0f172a !important;
+}
+
+.light .bg-cyber-bg {
+  background-color: var(--cyber-bg) !important;
+}
+
+.light [class*="bg-[#0a0f1c]"],
+.light [class*="bg-slate-900"],
+.light .bg-cyber-bg-card {
+  background-color: var(--cyber-bg-card) !important;
+}
+
+.light [class*="border-slate-800"],
+.light [class*="border-cyber-border"] {
+  border-color: var(--cyber-border) !important;
+}
+
+.light .text-white,
+.light .text-slate-100,
+.light .text-slate-200 {
+  color: var(--text-main) !important;
+}
+
+.light .text-slate-400,
+.light .text-slate-500,
+.light .text-slate-600 {
+  color: #475569 !important;
+}
+
+.light [class*="hover:bg-slate-800"]:hover,
+.light [class*="hover:bg-slate-900"]:hover {
+  background-color: var(--cyber-bg-card-hover) !important;
+}
+
+.light .shadow-neon-cyan,
+.light .shadow-neon-purple,
+.light .shadow-neon-green,
+.light .shadow-neon-red {
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05) !important;
+}
+
+.light .text-glow-cyan,
+.light .text-glow-purple,
+.light .text-glow-green,
+.light .text-glow-red {
+  text-shadow: none !important;
+}

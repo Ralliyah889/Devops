@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: omni-backend-deployment
+  namespace: omnicivilization
+  labels:
+    app: omni-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: omni-backend
+  template:
+    metadata:
+      labels:
+        app: omni-backend
+    spec:
+      imagePullSecrets:
+      - name: github-registry-secret
+      containers:
+      - name: backend
+        image: ghcr.io/ralliyahrushdahep/devops/omni-backend:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+        env:
+        # Defaults to local SQLite if PostgreSQL connection configuration is missing
+        - name: DATABASE_URL
+          value: "postgresql://postgres:postgres@omni-postgres-service:5432/omnicivilization"
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 10

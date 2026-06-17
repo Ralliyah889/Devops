@@ -1,0 +1,136 @@
+name: CI/CD Pipeline to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  FRONTEND_IMAGE: ${{ github.repository }}/omni-frontend
+  BACKEND_IMAGE: ${{ github.repository }}/omni-backend
+
+jobs:
+  build-and-deploy:
+    name: Build, Push, and Deploy to EC2
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Frontend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:latest
+            ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+
+      - name: Build and push Backend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:latest
+            ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+
+      - name: Pull Backend Docker image to verify registry login
+        run: |
+          docker pull ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+
+      - name: Make the Backend test container up
+        run: |
+          docker run -d -p 8000:8000 \
+            --name omni-backend-test \
+            -e DATABASE_URL="sqlite:///./test.db" \
+            ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+
+      - name: Verify application is up and healthy
+        run: |
+          echo "Waiting for backend service to start..."
+          timeout 30s sh -c 'until curl -s http://localhost:8000/ > /dev/null; do sleep 1; done'
+          
+          echo "Sending health check request..."
+          response=$(curl -s http://localhost:8000/)
+          echo "Response received: $response"
+          
+          # Verify the status is ONLINE
+          if echo "$response" | grep -q '"status":"ONLINE"'; then
+            echo "Health check passed!"
+          else
+            echo "Health check failed! Response does not indicate ONLINE status."
+            docker logs omni-backend-test
+            exit 1
+          fi
+
+      - name: Clean up test container
+        if: always()
+        run: |
+          docker stop omni-backend-test || true
+          docker rm omni-backend-test || true
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # Exit immediately on error
+            set -e
+
+            # Login to GitHub Container Registry
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            # Create deployment directory
+            mkdir -p ~/omni-app
+            cd ~/omni-app
+
+            # Write docker-compose.yml file dynamically with the specific image tags (SHA)
+            cat << 'EOF' > docker-compose.yml
+            version: '3.8'
+
+            services:
+              frontend:
+                image: ghcr.io/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+                container_name: omni-frontend
+                ports:
+                  - "80:80"
+                restart: always
+                depends_on:
+                  - backend
+
+              backend:
+                image: ghcr.io/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+                container_name: omni-backend
+                ports:
+                  - "8000:8000"
+                environment:
+                  - DATABASE_URL=sqlite:///./app/test.db
+                restart: always
+            EOF
+
+            # Pull the new images
+            docker compose pull
+
+            # Re-create and restart the containers
+            docker compose up -d --remove-orphans
+
+            # Clean up old unused images
+            docker image prune -f
